@@ -9,7 +9,10 @@ def main():
     st.title("📋 Weekly Team Status Dashboard")
 
     # df = load_data()
+
+
     init_db()  # ✅ Ensure DB and table exist
+    
     df = load_data()
 
 

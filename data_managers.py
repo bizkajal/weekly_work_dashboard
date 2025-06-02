@@ -20,6 +20,7 @@ def init_db():
         # cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
         # conn.commit()
 
+      
 
          
         cursor.execute(f"""
@@ -40,6 +41,8 @@ def load_data():
     """Load data from SQLite database into a DataFrame."""
     with sqlite3.connect(DB_FILE) as conn:
         df = pd.read_sql_query(f"SELECT * FROM {TABLE_NAME}", conn)
+        print("Data loaded from SQLite database:")
+        print(df.head())
     return df
 def save_data(df):
     """Append new updates to the SQLite database safely."""
