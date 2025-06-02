@@ -7,9 +7,10 @@ import sqlite3
 
 # data_managers.py
 
+os.makedirs(".streamlit", exist_ok=True)
 
+DB_FILE = ".streamlit/team_status.db"
 
-DB_FILE = "team_status.db"
 TABLE_NAME = "updates"
 
 def init_db():
