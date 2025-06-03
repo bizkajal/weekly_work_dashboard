@@ -105,7 +105,9 @@ def delete_records(df):
         # -- Delete Specific Records --
         if st.session_state.show_delete_records:
             st.markdown("#### 🧾 Delete Specific Records")
-            options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['Start Date']})", axis=1).tolist()
+            options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['start_date']})", axis=1).tolist()
+
+            # options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['Start Date']})", axis=1).tolist()
             to_delete = st.multiselect("Select records to delete", options, key="delete_multiselect")
 
             if st.button("Delete Selected Records", key="confirm_delete_records"):
@@ -126,7 +128,9 @@ def edit_records(df):
         st.info("No records available to edit.")
         return df
 
-    options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['Start Date']})", axis=1).tolist()
+    # options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['Start Date']})", axis=1).tolist()
+    options = df.apply(lambda row: f"{row['Name']} - {row['Task']} (Started: {row['start_date']})", axis=1).tolist()
+
     selected = st.selectbox("Select a record to edit", ["None"] + options)
 
     if selected != "None":
