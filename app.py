@@ -39,10 +39,10 @@ def main():
         edit_col1, edit_col2 = st.columns([1, 6])
         with edit_col1:
             if not st.session_state.show_edit_records:
-                if st.button("✏️ Show Edit Options"):
+                if st.button(" Show Edit Options"):
                     st.session_state.show_edit_records = True
             else:
-                if st.button("❌ Hide Edit Options"):
+                if st.button(" Hide Edit Options"):
                     st.session_state.show_edit_records = False
 
         if st.session_state.show_edit_records:

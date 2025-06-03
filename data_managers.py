@@ -49,18 +49,18 @@ def save_data(df):
     """Append new updates to the SQLite database safely."""
     with sqlite3.connect(DB_FILE) as conn:
         # Drop rows with missing required fields
-        df = df.dropna(subset=["Name", "Task", "Status"])
+        df = df.dropna(subset=["name", "task", "status"])
 
         # Ensure columns are in correct order to match DB schema
-        expected_columns = ["Name", "Task", "Status", "start_date", "ETA", "Remarks"]
+        expected_columns = ["name", "task", "status", "start_date", "eta", "remarks"]
         df = df[expected_columns]
 
         # Convert date columns to string if necessary
         df["start_date"] = df["start_date"].astype(str)
-        df["ETA"] = df["ETA"].astype(str)
+        df["eta"] = df["eta"].astype(str)
 
         # Now safely insert into SQLite
-        df.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
+        df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
 
 
         # df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
@@ -69,7 +69,7 @@ def save_data(df):
 #     if os.path.exists(CSV_FILE):
 #         return pd.read_csv(CSV_FILE)
 #     else:
-#         columns = ["Name", "Task", "Status", "Start Date", "ETA", "Remarks"]
+#         columns = ["Name", "Task", "Status", "Start Date", "eta", "remarks"]
 #         return pd.DataFrame(columns=columns)
 
 # def save_data(df):
