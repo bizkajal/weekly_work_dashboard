@@ -20,7 +20,6 @@ def init_db():
         # Create main updates table
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 task TEXT,
                 status TEXT,

@@ -20,9 +20,16 @@ def main():
 
 
     current_user = st.session_state.user
-    st.title(f"📋 Weekly Team Status - {current_user}")
+    st.title(f" Weekly Team Status - {current_user}")
 
     full_df = load_data()
+
+    #  Only admins can see this filter
+    if current_user == "admin":
+        team_members = full_df["name"].dropna().unique().tolist()
+        selected_member = st.selectbox("Filter by Team Member", ["All"] + sorted(team_members))
+        if selected_member != "All":
+            full_df = full_df[full_df["name"] == selected_member]
 
     if current_user != "admin":
         view_df = full_df[full_df["name"] == current_user].reset_index(drop=True)

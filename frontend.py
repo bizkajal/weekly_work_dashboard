@@ -4,8 +4,6 @@ from datetime import date
 from data_managers import  save_data, load_data, init_db
 import io
 
-
-
 def submit_form(df, current_user):
     with st.form(key=f"weekly_update_form_{current_user}_{len(df)}"):
         task = st.text_area("Task")
@@ -25,23 +23,37 @@ def submit_form(df, current_user):
                 "remarks": remarks
             }
 
-            # 🟢 Load full dataset and append new entry
+            # Append new entry
             full_df = load_data()
             full_df = pd.concat([full_df, pd.DataFrame([new_entry])], ignore_index=True)
             save_data(full_df)
 
-            st.success("Entry submitted successfully!")
+            st.success("✅ Entry submitted successfully!")
             st.rerun()  # To refresh form and table
-            return full_df
+          
 
     return df
 
 
-# --- Display and edit table ---
+
+
+
 def display_table(df, current_user):
-    st.subheader("Team Status Overview")
+    st.subheader(" Team Status Overview")
+
+    if df.empty:
+        st.info("No records to display yet.")
+        return df
+
+    # --- Add column headers ---
+    header_cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 1.2, 1.2])
+    headers = ["Name", "Task", "Status", "Start Date", "ETA", "Remarks"]
+    for col, header in zip(header_cols, headers):
+        col.markdown(f"**{header}**")  # Display header bold
+
+    # --- Loop through rows ---
     for i, row in df.iterrows():
-        cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 1.5, 1.5])
+        cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 1.2, 1.2])
         cols[0].write(row["name"])
         cols[1].write(row["task"])
         cols[2].write(row["status"])
@@ -57,13 +69,13 @@ def display_table(df, current_user):
             st.rerun()
 
         if can_delete and cols[7].button("Delete", key=f"delete_{i}"):
-            # df = df.drop(row.name).reset_index(drop=True)
             df = df.drop(index=i).reset_index(drop=True)
-
             save_data(df)
-            st.success("Record deleted!")
+            st.success("✅ Record deleted!")
             st.rerun()
+
     return df
+
 
 # --- Edit record form ---
 def edit_record(df, idx, current_user):
