@@ -14,28 +14,47 @@ DB_FILE = ".streamlit/team_status.db"
 TABLE_NAME = "updates"
 
 def init_db():
-    """Initialize the SQLite database and table if it doesn't exist."""
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        # cursor = conn.cursor()
-        # cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
-        # conn.commit()
-
-      
-
-         
+        
+        # Create main updates table
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                task TEXT ,
-                status TEXT ,
-                start_date TEXT ,
-                eta TEXT ,
+                task TEXT,
+                status TEXT,
+                start_date TEXT,
+                eta TEXT,
                 remarks TEXT
             )
         """)
+
+        # Create users table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL
+            )
+        """)
         conn.commit()
+
+def add_user(username, password):
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False  # Username already exists
+
+def get_users():
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, password FROM users")
+        return dict(cursor.fetchall())
+
 
 
 def load_data():
@@ -45,22 +64,20 @@ def load_data():
         print("Data loaded from SQLite database:")
         print(df.head())
     return df
-def save_data(df):
-    """Append new updates to the SQLite database safely."""
-    with sqlite3.connect(DB_FILE) as conn:
-        # Drop rows with missing required fields
-        df = df.dropna(subset=["name", "task", "status"])
 
-        # Ensure columns are in correct order to match DB schema
+def save_data(df):
+    """Overwrite all records in the SQLite database."""
+    with sqlite3.connect(DB_FILE) as conn:
+        df = df.dropna(subset=["name", "task", "status"])
         expected_columns = ["name", "task", "status", "start_date", "eta", "remarks"]
         df = df[expected_columns]
-
-        # Convert date columns to string if necessary
         df["start_date"] = df["start_date"].astype(str)
         df["eta"] = df["eta"].astype(str)
 
-        # Now safely insert into SQLite
-        df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
+        # Clear and rewrite the table
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM {TABLE_NAME}")
+        df.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
 
 
         # df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)

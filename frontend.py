@@ -1,179 +1,141 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
+from data_managers import  save_data, load_data, init_db
 import io
 
-def submit_form(df):
-    with st.form("status_form"):
-        st.subheader("Submit Your Weekly Update")
-        name = st.text_input("Name")
-        task = st.text_area("Task Description")
-        status = st.selectbox("Status", ["In Progress", "Completed", "Blocked"])
 
-        start_date = st.date_input("Start Date", value=date.today())
-        eta = st.date_input("ETA", value=date.today())
+
+def submit_form(df, current_user):
+    with st.form(key=f"weekly_update_form_{current_user}_{len(df)}"):
+        task = st.text_area("Task")
+        status = st.selectbox("Status", ["In Progress", "Completed", "Blocked"])
+        start_date = st.date_input("Start Date")
+        eta = st.date_input("ETA")
         remarks = st.text_area("Remarks")
-        submitted = st.form_submit_button("Submit Update")
+        submitted = st.form_submit_button("Submit")
 
         if submitted:
-            if not name.strip():
-                st.error("Please enter your name.")
-                return df, False
-            if not task.strip():
-                st.error("Please describe your task.")
-                return df, False
-
-            # Use consistent column names and order (match your database schema)
-            new_row = pd.DataFrame([{
-                "name": name,
+            new_entry = {
+                "name": current_user,
                 "task": task,
                 "status": status,
                 "start_date": str(start_date),
                 "eta": str(eta),
                 "remarks": remarks
-            }])
+            }
 
-            # If the existing df is empty, create columns
-            if df.empty:
-                df = new_row
-            else:
-                # Ensure columns match and order is correct
-                df = pd.concat([df, new_row], ignore_index=True)
-                df = df[["name", "task", "status", "start_date", "eta", "remarks"]]  # Adjust if needed
+            # 🟢 Load full dataset and append new entry
+            full_df = load_data()
+            full_df = pd.concat([full_df, pd.DataFrame([new_entry])], ignore_index=True)
+            save_data(full_df)
 
-            st.success(" Update submitted successfully!")
-            return df, True
-
-    return df, False
-
-def filter_data(df):
-    if "name" not in df.columns:
-        st.warning("⚠️ 'Name' column not found in data. Please submit at least one update.")
-        return df
-
-    valid_names = df["name"].dropna().astype(str).tolist()
-    filter_name = st.selectbox("Filter by Team Member", ["All"] + sorted(valid_names))
-
-    if filter_name == "All":
-        return df
-    else:
-        return df[df["name"].astype(str) == filter_name]
-
-
-def display_table(df):
-    st.dataframe(df, use_container_width=True)
-
-
-
-def delete_records(df):
-    # st.subheader("Manage Deletions")
-
-    # Initialize session state for toggles
-    if "show_delete_main" not in st.session_state:
-        st.session_state.show_delete_main = False
-    if "show_delete_name" not in st.session_state:
-        st.session_state.show_delete_name = False
-    if "show_delete_records" not in st.session_state:
-        st.session_state.show_delete_records = False
-
-    # Main toggle: Show / Hide full delete section
-    if st.button("Hide" if st.session_state.show_delete_main else "Delete", key="toggle_main_delete"):
-        st.session_state.show_delete_main = not st.session_state.show_delete_main
-        if not st.session_state.show_delete_main:
-            # Reset nested sections if hiding main panel
-            st.session_state.show_delete_name = False
-            st.session_state.show_delete_records = False
-
-    # If main section is shown
-    if st.session_state.show_delete_main:
-        # st.markdown("### Choose Deletion Method")
-
-        col1, col2 = st.columns(2)
-
-        # Toggle Team Member section
-        with col1:
-            if st.button("Hide Team Member" if st.session_state.show_delete_name else "Team Member", key="toggle_delete_name"):
-                st.session_state.show_delete_name = not st.session_state.show_delete_name
-
-        # Toggle Specific Records section
-        # with col2:
-        #     if st.button("Hide Specific Records" if st.session_state.show_delete_records else "Specific Records", key="toggle_delete_records"):
-        #         st.session_state.show_delete_records = not st.session_state.show_delete_records
-
-        # -- Delete by name section --
-        if st.session_state.show_delete_name:
-            st.markdown("#### Delete All Records by Team Member")
-            unique_names = sorted(df["name"].unique().tolist())
-            selected_name = st.selectbox("Select team member", ["None"] + unique_names, key="delete_by_name")
-
-            if selected_name != "None":
-                if st.button(f"Delete all records for {selected_name}", key="confirm_delete_name"):
-                    df = df[df["name"] != selected_name].reset_index(drop=True)
-                    st.success(f" All records for '{selected_name}' have been deleted.")
-
-        # -- Delete specific records section --
-        if st.session_state.show_delete_records:
-            st.markdown("#### Delete Specific Records")
-            options = df.apply(lambda row: f"{row['name']} - {row['task']} (Started: {row['start_date']})", axis=1).tolist()
-            to_delete = st.multiselect("Select records to delete", options, key="delete_multiselect")
-
-            if st.button("Delete Selected Records", key="confirm_delete_records"):
-                if not to_delete:
-                    st.warning(" Please select at least one record to delete.")
-                else:
-                    indexes_to_delete = [options.index(rec) for rec in to_delete]
-                    df = df.drop(df.index[indexes_to_delete]).reset_index(drop=True)
-                    st.success(f" Deleted {len(to_delete)} record(s).")
+            st.success("Entry submitted successfully!")
+            st.rerun()  # To refresh form and table
+            return full_df
 
     return df
 
 
-def edit_records(df):
-    st.subheader("Edit Records")
+# --- Display and edit table ---
+def display_table(df, current_user):
+    st.subheader("Team Status Overview")
+    for i, row in df.iterrows():
+        cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 1.5, 1.5])
+        cols[0].write(row["name"])
+        cols[1].write(row["task"])
+        cols[2].write(row["status"])
+        cols[3].write(row["start_date"])
+        cols[4].write(row["eta"])
+        cols[5].write(row["remarks"])
 
-    if df.empty:
-        st.info("No records available to edit.")
-        return df
+        can_edit = (current_user == "admin") or (row["name"] == current_user)
+        can_delete = can_edit
 
-    # options = df.apply(lambda row: f"{row['name']} - {row['task']} (Started: {row['Start Date']})", axis=1).tolist()
-    options = df.apply(lambda row: f"{row['name']} - {row['task']} (Started: {row['start_date']})", axis=1).tolist()
+        if can_edit and cols[6].button("Edit", key=f"edit_{i}"):
+            st.session_state.edit_row_index = i
+            st.rerun()
 
-    selected = st.selectbox("Select a record to edit", ["None"] + options)
+        if can_delete and cols[7].button("Delete", key=f"delete_{i}"):
+            # df = df.drop(row.name).reset_index(drop=True)
+            df = df.drop(index=i).reset_index(drop=True)
 
-    if selected != "None":
-        index = options.index(selected)
-        row = df.loc[index]
-
-        with st.form("edit_form"):
-            st.markdown("### Update Details")
-            name = st.text_input("name", value=row["name"])
-            task = st.text_area("task Description", value=row["task"])
-            status = st.selectbox("status", ["In Progress", "Completed", "Blocked"],
-                                  index=["In Progress", "Completed", "Blocked"].index(row["status"]))
-            start_date = st.date_input("Start Date", value=pd.to_datetime(row["start_date"]).date())
-            eta = st.date_input("eta", value=pd.to_datetime(row["eta"]).date())
-            remarks = st.text_area("remarks / Highlights", value=row["remarks"] if pd.notnull(row["remarks"]) else "")
-            submitted = st.form_submit_button("Update Record")
-
-            if submitted:
-                df = df.drop(columns=["id"], errors="ignore")
-
-                df.loc[index] = [name, task, status, start_date, eta, remarks]
-                st.success(" Record updated successfully!")
-
+            save_data(df)
+            st.success("Record deleted!")
+            st.rerun()
     return df
+
+# --- Edit record form ---
+def edit_record(df, idx, current_user):
+    st.subheader("Edit Record")
+    row = df.loc[idx]
+    with st.form("edit_form"):
+        name = st.text_input("Name", value=row["name"], disabled=current_user != "admin")
+        task = st.text_area("Task", value=row["task"])
+        status = st.selectbox("Status", ["In Progress", "Completed", "Blocked"], index=["In Progress", "Completed", "Blocked"].index(row["status"]))
+        start_date = st.date_input("Start Date", value=pd.to_datetime(row["start_date"]).date())
+        eta = st.date_input("ETA", value=pd.to_datetime(row["eta"]).date())
+        remarks = st.text_area("Remarks", value=row["remarks"])
+
+        if st.form_submit_button("Update Record"):
+            df.loc[idx] = [name, task, status, start_date.strftime("%Y-%m-%d"), eta.strftime("%Y-%m-%d"), remarks]
+            save_data(df)
+            st.success("Record updated!")
+            st.session_state.edit_row_index = None
+            st.rerun()
+
+# def filter_data(df):
+#     if "name" not in df.columns:
+#         return df
+#     names = df["name"].dropna().unique().tolist()
+#     selected = st.selectbox("Filter by Team Member", ["All"] + sorted(names))
+#     if selected != "All":
+#         return df[df["name"] == selected]
+#     return df
+
+# def display_table(df):
+#     if df.empty:
+#         st.info("No records to display.")
+#         return df
+
+#     if "edit_row_index" not in st.session_state:
+#         st.session_state.edit_row_index = None
+#     if "delete_row_index" not in st.session_state:
+#         st.session_state.delete_row_index = None
+
+#     cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 0.8, 0.8])
+#     headers = ["Name", "Task", "Status", "Start Date", "ETA", "Remarks", "✏️", "🗑️"]
+#     for col, header in zip(cols, headers):
+#         col.markdown(f"**{header}**")
+
+#     for i, row in df.iterrows():
+#         row_cols = st.columns([2, 2, 1.5, 1.5, 1.5, 2, 0.8, 0.8])
+#         row_cols[0].write(row["name"])
+#         row_cols[1].write(row["task"])
+#         row_cols[2].write(row["status"])
+#         row_cols[3].write(row["start_date"])
+#         row_cols[4].write(row["eta"])
+#         row_cols[5].write(row["remarks"])
+
+#         if row_cols[6].button("Edit", key=f"edit_{i}"):
+#             st.session_state.edit_row_index = i
+
+#         if row_cols[7].button("Delete", key=f"delete_{i}"):
+#             st.session_state.delete_row_index = i
+
+#     return df
+
 
 def download_excel(df):
+    import io
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='status')
-    excel_data = output.getvalue()
 
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    processed_data = output.getvalue()
     st.download_button(
-        label=" Download as Excel",
-        data=excel_data,
-        file_name="team_status.xlsx",
+        label="Download Excel",
+        data=processed_data,
+        file_name="weekly_team_status.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-    
