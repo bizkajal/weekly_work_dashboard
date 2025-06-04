@@ -5,8 +5,10 @@ from data_managers import add_user, get_users, init_db
 init_db()
 
 def show_login():
+    """Display the login and signup interface for users to authenticate or create an account."""
+
     st.title("Login")
-    login_tab, signup_tab = st.tabs(["🔐 Login", "📝 Sign Up"])
+    login_tab, signup_tab = st.tabs([" Login", " Sign Up"])
 
     # --- Login Tab ---
     with login_tab:
@@ -40,6 +42,8 @@ def show_login():
                     st.warning("Username already exists.")
 
 def logout():
+    """Provide a logout button to clear the session state."""
+    
     if st.button("Logout"):
         st.session_state.pop("user", None)
         st.rerun()

@@ -4,6 +4,8 @@ from data_managers import init_db, load_data, save_data,get_users, add_user
 from frontend import submit_form, display_table, edit_record, download_excel
 
 def main():
+    """Main function to run the Streamlit app for weekly team status updates."""
+    
     st.set_page_config(page_title="Weekly Team Status", layout="wide")
     init_db()
     
