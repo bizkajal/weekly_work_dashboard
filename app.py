@@ -1,57 +1,46 @@
 import streamlit as st
-from login import show_login, logout
-from data_managers import init_db, load_data, save_data, get_users, add_user
-from frontend import submit_form, display_table, edit_record, download_excel, show_donut_chart_plotly
+import logging
+
+from ui.login import render_login
+from ui.logout import render_logout
+from services.data_managers import init_db
+
+
+def main_app():
+    # Show logout button only if logged in
+    if st.button("Logout"):
+        render_logout()
+
+    st.write("App content goes here...")
+
+
+def init_session_state():
+    defaults = {"logged_in": False, "username": "", "theme": "light", "user_data": None}
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
+
 
 def main():
     st.set_page_config(page_title="Weekly Team Status", layout="wide")
+    # init database if tables are not present
     init_db()
+    # initialize the session state...
+    init_session_state()
+    # Configure logging
+    logging.basicConfig(
+        format="%(asctime)s — %(levelname)s — %(message)s", level=logging.INFO
+    )
 
-    users = get_users()
-    if "admin" not in users:
-        add_user("admin", "admin")
-
-    if "user" not in st.session_state:
-        show_login()
-        return
-
-    current_user = st.session_state.user
-    st.title(f"Weekly Team Status - {current_user}")
-
-    full_df = load_data()
-
-    if current_user == "admin":
-        team_members = full_df["name"].dropna().unique().tolist()
-        selected_member = st.selectbox(
-            "Filter by Team Member",
-            ["All"] + sorted(team_members),
-            key="admin_team_filter"
-        )
-
-        if selected_member != "All":
-            filtered_df = full_df[full_df["name"] == selected_member]
-        else:
-            filtered_df = full_df.copy()
+    logger = logging.getLogger(__name__)
+    if st.session_state.logged_in:
+        logger.info("logged In state:{}".format(st.session_state.logged_in))
+        main_app()
     else:
-        selected_member = current_user
-        filtered_df = full_df[full_df["name"] == current_user].reset_index(drop=True)
+        render_login()
 
-    if current_user != "admin":
-        filtered_df = submit_form(filtered_df, current_user)
-    else:
-        st.info("You can view all records.")
+    return "something"
 
-    view_df = display_table(filtered_df, current_user)
-
-    if "edit_row_index" in st.session_state and st.session_state.edit_row_index is not None:
-        edit_record(full_df, st.session_state.edit_row_index, current_user)
-
-    # Show Plotly donut chart(s)
-    st.header("Activity Distribution")
-    show_donut_chart_plotly(full_df, selected_member, current_user)
-
-    download_excel(full_df)
-    logout()
 
 if __name__ == "__main__":
     main()
